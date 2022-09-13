@@ -31,6 +31,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
   final myController = TextEditingController();
   final myController1 = TextEditingController();
   final myController2 = TextEditingController();
+  final myController3 = TextEditingController();
 
   //value of checkedBox widget true or false
   bool? _checkedValueVideo = false;
@@ -47,6 +48,10 @@ class _MyCustomFormState extends State<MyCustomForm> {
   bool photoSubmit = false;
   bool textSubmit = false;
 
+  String? _videoPath = '';
+  String? _photoPath = '';
+  String? _textPath = '';
+
   void preview() {
     //preview widget state
     // ....
@@ -56,6 +61,10 @@ class _MyCustomFormState extends State<MyCustomForm> {
   void commitChanges() {
     //send data to server
     // ....
+
+    print(_videoPath);
+    print(_photoPath);
+    print(_textPath);
     print("Changes Committted");
   }
 
@@ -65,8 +74,9 @@ class _MyCustomFormState extends State<MyCustomForm> {
 
     // Start listening to changes.
     myController1.addListener(_printFirstValue);
-    myController.addListener(_printLatestValue);
-    myController2.addListener(_printFirstValue);
+    myController.addListener(_printLSecondValue);
+    myController3.addListener(_printThirdtValue);
+    myController2.addListener(_printFourthValue);
   }
 
   @override
@@ -83,8 +93,16 @@ class _MyCustomFormState extends State<MyCustomForm> {
     print('First text field: ${myController1.text}');
   }
 
-  void _printLatestValue() {
+  void _printLSecondValue() {
     print('Second text field: ${myController.text}');
+  }
+
+  void _printThirdtValue() {
+    print('Second text field: ${myController3.text}');
+  }
+
+  void _printFourthValue() {
+    print('Second text field: ${myController2.text}');
   }
 
   @override
@@ -105,6 +123,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
             TextFormField(
               decoration: const InputDecoration(labelText: "taille d'écrans"),
               style: const TextStyle(color: Color.fromARGB(199, 39, 39, 102)),
+              controller: myController3,
             ),
             TextFormField(
               decoration: const InputDecoration(labelText: 'Background'),
@@ -138,10 +157,12 @@ class _MyCustomFormState extends State<MyCustomForm> {
                               print("no video result");
                             } else {
                               setState(() {
-                                result?.files.forEach((element) {
+                                _videoPath = videoResult?.paths.toString();
+                                videoResult?.files.forEach((element) {
                                   print(element.name);
                                   print(element.size);
                                 });
+                                //print(_videoPath);
                               });
                             }
                           }
@@ -193,8 +214,9 @@ class _MyCustomFormState extends State<MyCustomForm> {
                               print("no file result");
                             } else {
                               setState(() {
+                                _photoPath = photoResult?.paths.toString();
                                 photoResult?.files.forEach((element) {
-                                  print(element.name);
+                                  print(element.path);
                                   print("**********");
                                   print(element.bytes);
                                   print("**********");
@@ -205,6 +227,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
                                   print(element.size);
                                   print("**********");
                                 });
+                                //print(_photoPath);
                               });
                             }
                           }
@@ -253,24 +276,23 @@ class _MyCustomFormState extends State<MyCustomForm> {
                         color: Color.fromARGB(199, 39, 39, 102)),
                     controller: myController2,
                     maxLength: 500,
+                    maxLines: null,
                   )
                 ],
               ),
             ),
-            Container(
-              child: Column(children: [
-                ElevatedButton(
-                    onPressed: (() => setState(() {
-                          commitChanges();
-                        })),
-                    child: const Text("Ajouter Tache")),
-                ElevatedButton(
-                    onPressed: (() => setState(() {
-                          preview();
-                        })),
-                    child: const Text("Preview"))
-              ]),
-            )
+            Column(children: [
+              ElevatedButton(
+                  onPressed: (() => setState(() {
+                        commitChanges();
+                      })),
+                  child: const Text("Ajouter Tache")),
+              ElevatedButton(
+                  onPressed: (() => setState(() {
+                        preview();
+                      })),
+                  child: const Text("Preview"))
+            ])
           ],
         ),
       ),
