@@ -63,7 +63,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
     print("element Previewed");
   }
 
-  Future sendImage(String source) async {
+  Future sendImage() async {
     var uri = "http://localhost/pubserver/create.php";
     var request = http.MultipartRequest('POST', Uri.parse(uri));
     if (_photoPath != '') {
@@ -73,6 +73,8 @@ class _MyCustomFormState extends State<MyCustomForm> {
       await request.send().then((result) {
         http.Response.fromStream(result).then((response) {
           var message = jsonDecode(response.body);
+          print(message);
+          print('sendmessage');
 
           // show snackbar if input data successfully
           final snackBar = SnackBar(content: Text(message['message']));
@@ -91,22 +93,88 @@ class _MyCustomFormState extends State<MyCustomForm> {
     try {
       final response =
           await http.get(Uri.parse("http://localhost/pubserver/list.php"));
+      print(response.statusCode);
       if (response.statusCode == 200) {
+        print('if response ok .');
+        print(response.body);
         final data = jsonDecode(response.body);
         setState(() {
           _images = data;
+          _images.forEach((element) {
+            print(element);
+          });
         });
       }
     } catch (e) {
+      print('getError');
       print(e);
     }
   }
 
-  void commitChanges() {
+  Future sendVideo() async {
+    //http POST video
+    var uri = "http://localhost/pubserver/videoup.php";
+    var request = http.MultipartRequest('POST', Uri.parse(uri));
+    if (_videoPath != '') {
+      var vid = await http.MultipartFile.fromPath('video',
+          _videoPath.toString().substring(1, _videoPath.toString().length - 1));
+      request.files.add(vid);
+      await request.send().then((result) {
+        http.Response.fromStream(result).then((response) {
+          print(response.body);
+          var message = jsonDecode(response.body);
+          print(message);
+          print('video');
+          // show snackbar if input data successfully
+          final snackBar = SnackBar(content: Text(message['message']));
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+          //get video for preview
+          getVideoServer();
+        });
+      }).catchError((e) {
+        print(e);
+      });
+    }
+  }
+
+  Future getVideoServer() async {
+    try {
+      final response = await http
+          .get(Uri.parse("http://localhost/pubserver/Videoslist.php"));
+      print(response.statusCode);
+      if (response.statusCode == 200) {
+        print('if response ok .');
+        print(response.body);
+        final data = jsonDecode(response.body);
+        setState(() {
+          _images = data;
+          _images.forEach((element) {
+            print(element);
+          });
+        });
+      }
+    } catch (e) {
+      print('getError');
+      print(e);
+    }
+  }
+
+  void commitChanges() async {
     //send data to server
     // ....
-    print(_photoPath.toString().substring(1, _photoPath.toString().length - 1));
-    sendImage("aaa");
+    //image
+    if (_photoPath != null) {
+      await sendImage();
+      // receive images data list from server
+      await getImageServer();
+    }
+    //video
+    if (_videoPath != null) {
+      await sendVideo();
+      // receive videos data list from server
+      await getVideoServer();
+    }
+
     print(_videoPath);
     print(_photoPath);
     print(_textPath);
