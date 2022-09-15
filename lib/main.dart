@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(const MyApp());
 
@@ -52,16 +55,58 @@ class _MyCustomFormState extends State<MyCustomForm> {
   String? _photoPath = '';
   String? _textPath = '';
 
+  List _images = [];
+
   void preview() {
     //preview widget state
     // ....
     print("element Previewed");
   }
 
+  Future sendImage(String source) async {
+    var uri = "http://localhost/pubserver/create.php";
+    var request = http.MultipartRequest('POST', Uri.parse(uri));
+    if (_photoPath != '') {
+      var pic = await http.MultipartFile.fromPath("image",
+          _photoPath.toString().substring(1, _photoPath.toString().length - 1));
+      request.files.add(pic);
+      await request.send().then((result) {
+        http.Response.fromStream(result).then((response) {
+          var message = jsonDecode(response.body);
+
+          // show snackbar if input data successfully
+          final snackBar = SnackBar(content: Text(message['message']));
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+          //get new list images
+          getImageServer();
+        });
+      }).catchError((e) {
+        print(e);
+      });
+    }
+  }
+
+  Future getImageServer() async {
+    try {
+      final response =
+          await http.get(Uri.parse("http://localhost/pubserver/list.php"));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _images = data;
+        });
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
   void commitChanges() {
     //send data to server
     // ....
-
+    print(_photoPath.toString().substring(1, _photoPath.toString().length - 1));
+    sendImage("aaa");
     print(_videoPath);
     print(_photoPath);
     print(_textPath);
