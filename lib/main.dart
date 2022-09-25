@@ -173,6 +173,44 @@ class _MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  Future sendText() async {
+    //http POST video
+    var uri = "http://localhost/pubserver/textup.php";
+    if (_textPath != '') {
+      var requestt = await http.post(Uri.parse(uri), body: _textPath);
+      var message = await requestt.body;
+      print(message);
+      print('text');
+      // show snackbar if input data successfully
+      // final snackBar = SnackBar(content: Text(message['message']));
+      // ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      //get video for preview
+      getText();
+    }
+  }
+
+  Future getText() async {
+    try {
+      final response =
+          await http.get(Uri.parse("http://localhost/pubserver/textLists.php"));
+      print(response.statusCode);
+      if (response.statusCode == 200) {
+        print('if response ok .');
+        print(response.body);
+        final data = jsonDecode(response.body);
+        setState(() {
+          _images = data;
+          _images.forEach((element) {
+            print(element);
+          });
+        });
+      }
+    } catch (e) {
+      print('getError');
+      print(e);
+    }
+  }
+
   void commitChanges() async {
     //send data to server
     // ....
@@ -189,6 +227,14 @@ class _MyCustomFormState extends State<MyCustomForm> {
       await getVideoServer();
     }
 
+    //Text
+    if (_textPath != null) {
+      await sendText();
+
+      await getText();
+    }
+    print(socket.length);
+    socket.add(utf8.encode('Update'));
     print(_videoPath);
     print(_photoPath);
     print(_textPath);
@@ -200,7 +246,9 @@ class _MyCustomFormState extends State<MyCustomForm> {
       socket = sock;
       socket.listen(dataHandler,
           onError: errorHandler, onDone: doneHandler, cancelOnError: false);
-      socket.add(utf8.encode('hello there this is the admin'));
+      socket.add(utf8.encode(
+          'hello there this is the admin ${socket.address}:${socket.port}'));
+      socket.add(utf8.encode('Update'));
     }).catchError((Object e) {
       print("Unable to connect: $e");
       exit(1);
