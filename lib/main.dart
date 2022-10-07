@@ -1,11 +1,64 @@
 import 'dart:convert';
+//import 'dart:html';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 
 void main() => runApp(const MyApp());
+
+class Diaporama {
+  String name;
+  String date;
+
+  List<Taches>? tache;
+
+  Diaporama(this.name, this.date, [this.tache]);
+
+  Map toJson() {
+    List<Map>? tache =
+        this.tache != null ? this.tache!.map((i) => i.toJson()).toList() : null;
+    return {
+      'name': name,
+      'date': name,
+      'tache': tache,
+    };
+  }
+
+  @override
+  String toString() {
+    return '{ ${this.name}, ${this.date}, ${this.tache} }';
+  }
+}
+
+class Taches {
+  String kindOf;
+  String link;
+  int periode;
+
+  Taches(this.kindOf, this.link, this.periode);
+
+  Map toJson() => {
+        'kindOf': kindOf,
+        'link': link,
+        'periode': periode,
+      };
+}
+
+class VideosJson {
+  int id_video = 0;
+  String video = "";
+  String date = "";
+
+  VideosJson(this.id_video, this.video, this.date);
+
+  factory VideosJson.fromJson(dynamic json) {
+    return VideosJson(json('id_video') as int, json('video') as String,
+        json('date') as String);
+  }
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -56,13 +109,91 @@ class _MyCustomFormState extends State<MyCustomForm> {
   String _previewPhoto =
       "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg";
 
+  // path to save
   String? _videoPath = '';
   String? _photoPath = '';
   String? _textPath = '';
 
   late Socket socket;
 
+  Diaporama? diapo;
+
+  //list of diapo widget
+  final List<Widget> _diapoList = [];
+
+  void _addDiapoWidget() {
+    setState(() {
+      getImageServer();
+      _diapoList.add(_diaWidget());
+    });
+  }
+
+  Widget _diaWidget() {
+    String? _value;
+    return Container(
+      height: 80,
+      margin: const EdgeInsets.only(top: 5, left: 8, right: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.orangeAccent[100],
+      ),
+      child: Row(
+        children: [
+          DropdownButton(
+            selectedItemBuilder: (BuildContext context) {
+              return imgUrl.map<Widget>((item) {
+                return Text('item $item');
+              }).toList();
+            },
+            items: imgUrl.map((item) {
+              return DropdownMenuItem<String>(
+                value: item,
+                child: Text('Log $item'),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                print("the value is");
+                print(value);
+                _value = value;
+              });
+            },
+            value: _value,
+            hint: const Text("select image"),
+            disabledHint: const Text('Disabled'),
+          )
+        ],
+      ),
+    );
+  }
+
+  void sendDiaapo() {
+    List<Taches> tachetest = [
+      Taches(
+          'photo',
+          "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg",
+          4),
+      Taches(
+          'photo',
+          "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png",
+          10),
+      Taches('video', "http://localhost/pubserver/videos/ERA%20-%20Ameno.mp4",
+          230),
+    ];
+    String jsonTache = jsonEncode(tachetest);
+    print(jsonTache);
+
+    diapo = Diaporama('firstTest', '20/20/2022', tachetest);
+    String jsonDiapo = jsonEncode(diapo);
+    print(jsonDiapo);
+  }
+
   List _images = [];
+  List<String> imgUrl = [];
+  List _videos = [];
+  List<String> VidUrl = [];
+  List _txts = [];
+  List<String> txtUrl = [];
 
   void preview() {
     //preview widget state
@@ -77,6 +208,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
     print("element Previewed");
   }
 
+  //send and save images to server MySQL
   Future sendImage() async {
     var uri = "http://localhost/pubserver/create.php";
     var request = http.MultipartRequest('POST', Uri.parse(uri));
@@ -95,7 +227,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
 
           //get new list images
-          getImageServer();
+          //getImageServer();
         });
       }).catchError((e) {
         print(e);
@@ -103,19 +235,19 @@ class _MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  //get List of images names from server
   Future getImageServer() async {
     try {
       final response =
           await http.get(Uri.parse("http://localhost/pubserver/list.php"));
       print(response.statusCode);
       if (response.statusCode == 200) {
-        print('if response ok .');
-        print(response.body);
         final data = jsonDecode(response.body);
+        _images = data;
         setState(() {
-          _images = data;
+          imgUrl.clear();
           _images.forEach((element) {
-            print(element);
+            imgUrl.add(element['image']);
           });
         });
       }
@@ -125,6 +257,8 @@ class _MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  //send and save videos to server MySQL
+  // problem with "Content-Length of 122163458 bytes exceeds the limit of 41943040 bytes"
   Future sendVideo() async {
     //http POST video
     var uri = "http://localhost/pubserver/videoup.php";
@@ -143,7 +277,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
           final snackBar = SnackBar(content: Text(message['message']));
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
           //get video for preview
-          getVideoServer();
+          //getVideoServer();
         });
       }).catchError((e) {
         print(e);
@@ -151,6 +285,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  //get List of videos names from server
   Future getVideoServer() async {
     try {
       final response = await http
@@ -160,10 +295,11 @@ class _MyCustomFormState extends State<MyCustomForm> {
         print('if response ok .');
         print(response.body);
         final data = jsonDecode(response.body);
+        _videos = data;
         setState(() {
-          _images = data;
-          _images.forEach((element) {
-            print(element);
+          VidUrl.clear();
+          _videos.forEach((element) {
+            VidUrl.add(element['video']);
           });
         });
       }
@@ -173,6 +309,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  //send and save Text to server MySQL
   Future sendText() async {
     //http POST video
     var uri = "http://localhost/pubserver/textup.php";
@@ -184,11 +321,12 @@ class _MyCustomFormState extends State<MyCustomForm> {
       // show snackbar if input data successfully
       // final snackBar = SnackBar(content: Text(message['message']));
       // ScaffoldMessenger.of(context).showSnackBar(snackBar);
-      //get video for preview
-      getText();
+      //get Text for preview
+      //getText();
     }
   }
 
+  //get List of Text names from server
   Future getText() async {
     try {
       final response =
@@ -198,10 +336,10 @@ class _MyCustomFormState extends State<MyCustomForm> {
         print('if response ok .');
         print(response.body);
         final data = jsonDecode(response.body);
+        _txts = data;
         setState(() {
-          _images = data;
-          _images.forEach((element) {
-            print(element);
+          _txts.forEach((element) {
+            txtUrl.add(element['contenu']);
           });
         });
       }
@@ -211,6 +349,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  // commit videos,Images,Text choices to send to server
   void commitChanges() async {
     //send data to server
     // ....
@@ -233,7 +372,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
 
       await getText();
     }
-    print(socket.length);
+    //print(socket.length);
     socket.add(utf8.encode('Update'));
     print(_videoPath);
     print(_photoPath);
@@ -241,6 +380,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
     print("Changes Committted");
   }
 
+  //send signals to lcd to update their state and take the new pub
   void newChanges() async {
     Socket.connect("localhost", 9000).then((Socket sock) {
       socket = sock;
@@ -292,6 +432,8 @@ class _MyCustomFormState extends State<MyCustomForm> {
 
   @override
   void initState() {
+    sendDiaapo();
+    getImageServer();
     super.initState();
     newChanges();
     // Start listening to changes.
@@ -517,7 +659,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
                       ],
                     ),
                   ),
-                  Row(children: [
+                  Row(children: <Widget>[
                     ElevatedButton(
                         onPressed: (() => setState(() {
                               commitChanges();
@@ -540,6 +682,32 @@ class _MyCustomFormState extends State<MyCustomForm> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  const Text("Diaporama",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  FloatingActionButton(
+                    onPressed: _addDiapoWidget,
+                    tooltip: 'Add',
+                    child: const Icon(Icons.add),
+                  ),
+                  Column(
+                    children: [
+                      ListView.builder(
+                          scrollDirection: Axis.vertical,
+                          shrinkWrap: true,
+                          itemCount: _diapoList.length,
+                          itemBuilder: ((context, index) {
+                            return _diapoList[index];
+                          }))
+                    ],
+                  ),
+                  // MyDiaporama(),
+                ],
+              ),
+            )
           ],
         ),
       ),
