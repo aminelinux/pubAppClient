@@ -129,7 +129,9 @@ class _MyCustomFormState extends State<MyCustomForm> {
   }
 
   Widget _diaWidget() {
-    String? _value;
+    String _value = imgUrl.first;
+    print("the first value is ");
+    print(_value);
     return Container(
       height: 80,
       margin: const EdgeInsets.only(top: 5, left: 8, right: 8),
@@ -140,6 +142,7 @@ class _MyCustomFormState extends State<MyCustomForm> {
       child: Row(
         children: [
           DropdownButton(
+            value: _value,
             selectedItemBuilder: (BuildContext context) {
               return imgUrl.map<Widget>((item) {
                 return Text('item $item');
@@ -155,10 +158,10 @@ class _MyCustomFormState extends State<MyCustomForm> {
               setState(() {
                 print("the value is");
                 print(value);
-                _value = value;
+                _value = value!;
               });
             },
-            value: _value,
+            //value: _value,
             hint: const Text("select image"),
             disabledHint: const Text('Disabled'),
           )
